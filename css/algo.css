@@ -1,0 +1,20 @@
+.node {
+    background-color: #0f9d58;
+    fill : #0f9d58;
+    padding: 10px;
+    border: solid black 5px;
+    font: 20px sans-serif;
+    margin: 1px;
+}
+
+.node-info {
+    color: white;
+    fill: white;
+    text-align: center;
+}
+
+.traversal {
+    fill : none;
+    stroke : white;
+    stroke-width: 2.5px;
+}
