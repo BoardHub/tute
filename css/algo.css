@@ -7,6 +7,12 @@
     margin: 1px;
 }
 
+.node.selected {
+    background-color: #0f0f9d;
+    fill : #0f0f9d;
+}
+
+
 .node-info {
     color: white;
     fill: white;
