@@ -22,14 +22,22 @@ var stepIndex = 0;
 var index = 0;
 
 var barHeight = 50;
+var transformFactor = 1;
 
 function plotAlgo(algo) {
 
     var data = algo.data.split(',');
     
+    var svgWidth = barHeight * data.length;
+
+    if((svgWidth * 2) < window.innerWidth  ){
+        svgWidth = svgWidth * 2;
+        transformFactor = data.length;
+    }
+    
     svg = d3.select("#nav-content").append("svg")
         .attr("height", barHeight * 3)
-        .attr("width", 2 * barHeight * data.length);
+        .attr("width", svgWidth);
 //         .attr("height", barHeight * data.length);
 
     // Algo Info
@@ -57,6 +65,10 @@ function plotDS(algo, data) {
 
 function plotArray(algo, data) {
 
+    if(transformFactor == 1) {
+        stepIndex++;
+    }
+
     if(typeof data == 'string') {
         data = data.split(',');
     }
@@ -70,7 +82,7 @@ function plotArray(algo, data) {
                 .data(data).enter()
             .append("g")
                 .attr("transform", function(d, i) {
-                    return "translate(" + ((data.length * barHeight) + (i * barHeight)) + "," + ((stepIndex + 1) * barHeight) +")"; 
+                    return "translate(" + ((transformFactor * barHeight) + (i * barHeight)) + "," + ((stepIndex + 1) * barHeight) +")"; 
                 });
 //                 .attr("transform", function(d, i) { 
 //                     return "translate(0," + i * barHeight + ")"; 
@@ -89,15 +101,15 @@ function plotArray(algo, data) {
         .attr("class", "data node-info").attr("x", 15).attr("y", 30)
         .text(function(d) { return d; });
 
-    stepIndex += 1;
+    stepIndex++;
 }
 
 function plotStepInfo(step) {
 
     svg.attr("height", (stepIndex + 5) * barHeight);
 
-    statusText.attr("y", (stepIndex + 2) * barHeight);
-    resultText.attr("y", (stepIndex + 3) * barHeight);
+    statusText.attr("y", (stepIndex + 4) * barHeight);
+    resultText.attr("y", (stepIndex + 5) * barHeight);
 
     svg.append('text')
         .attr('id', 'step.'+step.id).attr("class", "node-info").attr("x", barHeight).attr("y", (stepIndex + 1) * barHeight)
@@ -106,7 +118,7 @@ function plotStepInfo(step) {
 
 function plotOutput(step) {
     statusText.text('Status : ' + (step.status || ''));
-    resultText.text('Result :' + (step.result || ''));
+    resultText.text('Result : ' + (step.result || ''));
 }
 
 
@@ -121,8 +133,9 @@ function plotStep(algo, data, step) {
     
             plotStepInfo(step);
 
-            eval(plotters['step.'+step.operation])(algo, data, step);
-
+            if(step.operation) {
+                eval(plotters['step.'+step.operation])(algo, data, step);    
+            }
         })
         .on('end', function() {
 
@@ -130,7 +143,7 @@ function plotStep(algo, data, step) {
 
             if(step.nextstep) {
                 plotStep(algo, data, step.nextstep);
-            } 
+            }
         });
     
 }
@@ -157,7 +170,7 @@ function plotArrayTraversal(algo, data, step) {
                 .selectAll('path .arc')
                     .data(data).enter()
                     .append('g')
-                    .attr("transform", function(d, i) { return "translate(" + ((data.length * barHeight) + (i * barHeight)) + "," + (2 * barHeight) + ")"; } );
+                    .attr("transform", function(d, i) { return "translate(" + ((transformFactor * barHeight) + (i * barHeight)) + "," + (stepIndex * barHeight) + ")"; } );
 
     var paths = pathGs.append('path')
         .datum({endAngle: -Math.PI / 2})
@@ -169,7 +182,7 @@ function plotArrayTraversal(algo, data, step) {
     var tri = svg.append('path')
         .attr('d', symbolTriangle)
         .attr('class', 'pointer traversal')
-        .attr("transform", "translate(" + ((data.length * barHeight) + (barHeight/2))  + "," + (2 * barHeight)  + ")");
+        .attr("transform", "translate(" + ((transformFactor * barHeight) + (barHeight/2))  + "," + (stepIndex * barHeight)  + ")");
 
     var nextStep = widgets[step.nextstep];
     delete step.nextstep;
@@ -184,7 +197,7 @@ function plotArrayTraversal(algo, data, step) {
         
         tri.transition().duration(0).delay(i * 1000)
         .call(function(s) {
-            s.attr("transform", function() { return "translate(" + ((data.length * barHeight) + (i * barHeight) + (barHeight/2))  + "," + (2 * barHeight)  + ")"; } )
+            s.attr("transform", function() { return "translate(" + ((transformFactor * barHeight) + (i * barHeight) + (barHeight/2))  + "," + ((stepIndex - 1) * barHeight)  + ")"; } )
         })
         .on('start', function() {
             console.log('starting : ' + index);
