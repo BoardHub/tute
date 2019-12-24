@@ -4,25 +4,28 @@ plotters['algo.ds'] = 'plotDS';
 plotters['algo.ds.array'] = 'plotArray';
 
 plotters['step'] = 'plotStep';
+
 plotters['step.traverse'] = 'plotTraverse';
 plotters['step.traverse.array'] = 'plotArrayTraversal';
-plotters['step.match'] = 'plotMatch';
 
+plotters['step.match'] = 'plotMatch';
 plotters['step.compare'] = 'plotCompare';
 plotters['step.split'] = 'plotSplit';
+plotters['step.discard'] = 'plotDiscard';
+plotters['step.swap'] = 'plotSwap';
+plotters['step.select'] = 'plotSelect';
 
 
-var svg;
-var nodeG;
+var play = urlParams.get('play') || 'loop';
 
-var statusText;
-var resultText;
+var playB, nextB;
+var svg, nodeG, nodeIndx, nodes, nodeData;
+var statusText, resultText;
 
-var stepIndex = 0;
-var index = 0;
+var stepIndex = 0, index = 0;
+var barHeight = 50, transformFactor = 1;
 
-var barHeight = 50;
-var transformFactor = 1;
+var cAlgo, cData, nextstep;
 
 function plotAlgo(algo) {
 
@@ -34,7 +37,22 @@ function plotAlgo(algo) {
         svgWidth = svgWidth * 2;
         transformFactor = data.length;
     }
-    
+
+//     playB = d3.select("#nav-content").append('button').text( play == 'loop' ?  '||' : '|>' ).on('click', function() {
+//         if(play == 'loop') {
+//             play = 'tick';
+//             playB.text('|>');
+//         } else {
+//             play = 'loop';
+//             playB.text('||');
+//             plotNextStep();
+//         }
+//     });
+
+//     nextB = d3.select("#nav-content").append('button').text('>').on('click', function() {
+//         plotNextStep();
+//     });
+
     svg = d3.select("#nav-content").append("svg")
         .attr("height", barHeight * 3)
         .attr("width", svgWidth);
@@ -63,6 +81,14 @@ function plotDS(algo, data) {
     eval(plotters['algo.ds.'+algo.ds])(algo, data);
 }
 
+function plotTraverse(algo, data, step) {
+    eval(plotters['step.traverse.'+algo.ds])(algo, data, step)
+}
+
+function plotNextStep() {
+    plotStep(cAlgo, cData, nextstep);
+}
+
 function plotArray(algo, data) {
 
     if(transformFactor == 1) {
@@ -76,37 +102,44 @@ function plotArray(algo, data) {
     console.log('ploting array of size: ' + data.length + ' data : ' + data);
     
     // Container
-    nodeG = svg.append('g')
-                .attr('id', stepIndex)
-            .selectAll("g")
-                .data(data).enter()
-            .append("g")
+    nodeG = svg.append('g').attr('id', stepIndex)
+                .selectAll("g").data(data).enter().append("g")
                 .attr("transform", function(d, i) {
-                    return "translate(" + ((transformFactor * barHeight) + (i * barHeight)) + "," + ((stepIndex + 1) * barHeight) +")"; 
-                });
-//                 .attr("transform", function(d, i) { 
-//                     return "translate(0," + i * barHeight + ")"; 
-//                 });
+                        return "translate(" + ((transformFactor * barHeight) + (i * barHeight)) + "," + ((stepIndex + 1) * barHeight) +")"; 
+                    });
+//             .attr("transform", function(d, i) { 
+//                 return "translate(0," + i * barHeight + ")"; 
+//             });
     
-    nodeG.append('text')
-        .attr("class", "index node-info").attr("x", 15).attr("y", -15)
-        .text(function(d, i) { return i; });
+    // Index Info
+    nodeIndx = nodeG.append('text')
+                .attr("class", "index node-info").attr("x", 15).attr("y", -15)
+                .text(function(d, i) { return i; });
+    
+    // Node
+    nodes = nodeG.append("rect")
+                .attr("class", "node").attr("width", barHeight - 5 ).attr("height", barHeight - 5);
+ 
+    // Data Info
+    nodeData = nodeG.append("text")
+                .attr("class", "data node-info").attr("x", 15).attr("y", 30)
 
-    // Data Node
-    nodeG.append("rect")
-        .attr("class", "node").attr("width", barHeight - 5 ).attr("height", barHeight - 5);
-    
-    // Data Node Info
-    nodeG.append("text")
-        .attr("class", "data node-info").attr("x", 15).attr("y", 30)
-        .text(function(d) { return d; });
+    plotArrayData();
 
     stepIndex++;
+}
+
+function plotArrayData(delay) {
+    nodeData.transition().duration(10000).delay(delay || 0).text(function(d, i) {
+        return d; 
+    });
 }
 
 function plotStepInfo(step) {
 
     svg.attr("height", (stepIndex + 5) * barHeight);
+
+    $(window).scrollTop($(document).height());
 
     statusText.attr("y", (stepIndex + 4) * barHeight);
     resultText.attr("y", (stepIndex + 5) * barHeight);
@@ -125,33 +158,45 @@ function plotOutput(step) {
 function plotStep(algo, data, step) {
 
     step = widgets[step];
+    console.info('step.info : ' + step.info);
 
     stepIndex++;
 
     svg.transition().delay(2000)
         .on('start', function() {
     
-            plotStepInfo(step);
+            if(step.info) {
+                plotStepInfo(step);    
+            }
+            
+            if(step.data) {
+                plotDS(algo, step.data);
+            } else {
+                stepIndex--;
+            }
 
             if(step.operation) {
-                eval(plotters['step.'+step.operation])(algo, data, step);    
+                var plotter = plotters['step.'+step.operation];
+                if(!plotter) {
+                    console.error('No Plotter defined for Step :' + step.id + ', Operation : ' + 'step.' + step.operation);
+                    return;
+                }
+                eval(plotter)(algo, data, step);
             }
         })
         .on('end', function() {
 
             plotOutput(step);
 
-            if(step.nextstep) {
+            if(play == 'loop' && step.nextstep) {
                 plotStep(algo, data, step.nextstep);
+            } else {
+                cAlgo = algo;
+                cData = data;
+                nextstep = step.nextstep;
             }
         });
     
-}
-
-function plotTraverse(algo, data, step) {
-    var operand = [ 0, data.length-1 ];
-    console.log('running loop from :  ' + operand[0] + ' to ' + operand[1]);
-    eval(plotters['step.traverse.'+algo.ds])(algo, data, step)
 }
 
 var arc = d3.arc()
@@ -164,6 +209,11 @@ var symbolTriangle = d3.symbol().size(10).type(d3.symbolTriangle);
 
 function plotArrayTraversal(algo, data, step) {
 
+    stepIndex++;
+    
+    var operand = [ 0, data.length - 1 ];
+    console.log('running loop from :  ' + operand[0] + ' to ' + operand[1]);
+    
     var pathGs = svg
                 .append('g')
                     .attr('id', stepIndex)
@@ -237,12 +287,54 @@ function plotMatch(data, operand) {
 
 
 function plotCompare(algo, data, step) {
-    console.log(step.info);    
+    plotSelectArray(step.operand, 'active')
 }
 
 function plotSplit(algo, data, step) {
-    plotDS(algo, step.data);
-    d3.select(nodeG.nodes()[step.operand]).select('.node')
-        .transition().delay(1000)
-        .attr('class', 'node selected');
+    plotSelectArray(step.operand, 'processed')
+}
+
+function plotDiscard(algo, data, step) {
+    step.operand.split(',').forEach(function(range){
+        var indxs = range.split('-')
+        for(var indx = indxs[0]; indx <= indxs[1]; indx++) {
+            plotSelectNode(indx, 'deactive');
+        }
+    })
+}
+
+function plotSwap(algo, data, step) {
+    
+    stepIndex++;
+    
+    data = nodeData.data();
+    plotArray(algo, data);
+
+    var indxs = step.operand.split(',');
+    var s = data[indxs[0]];
+    var t = data[indxs[1]];
+    data[indxs[0]] = t;
+    data[indxs[1]] = s;
+    
+    nodeData.data(data);
+    plotArrayData(1000);
+
+}
+
+function plotSelect(algo, data, step) {
+    plotSelectArray(step.operand, 'processed')
+}
+
+function plotSelectArray(indxs, cls) {
+    if(!indxs) return;
+    indxs.split(',').forEach(function(i) {
+        plotSelectNode(i, cls);
+    })
+}
+
+function plotSelectNode(i, cls) {
+    d3.select(nodeG.nodes()[i]).select('.node')
+            .transition()
+            //.delay(1000)
+            .attr('class', 'node ' + cls);
 }

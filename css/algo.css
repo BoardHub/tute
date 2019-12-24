@@ -7,15 +7,25 @@
     margin: 1px;
 }
 
-.node.selected {
+.node.deactive {
+    background-color: #999;
+    fill : #999;
+}
+
+.node.active {
+    background-color: #9d0f0f;
+    fill : #9d0f0f;
+}
+
+.node.processed {
     background-color: #0f0f9d;
     fill : #0f0f9d;
 }
 
 
 .node-info {
-    color: white;
-    fill: white;
+    color: black;
+    fill: black;
     text-align: center;
 }
 
